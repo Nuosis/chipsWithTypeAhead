@@ -1,114 +1,74 @@
 import React from 'react'
 import './App.css'
+import { Typeahead } from 'react-bootstrap-typeahead';
+import { isValid } from './Utlis'
+import { Modal, Button } from 'react-bootstrap';
 class App extends React.Component {
-  state={
-    value:'',
-    emails: [],
-    error: null
+  constructor(props) {
+    super(props);
+    this.state = {
+      emails: [], // initialize to empty array
+      value: '',
+      error: null,
+      options: ['example1@example.com', 'example2@example.com', 'example3@example.com'],
+      showModal: false, // add showModal state
+      modalMessage: '', // add modalMessage state
+    };
   }
 
-  handleChange = (evt) => {
-    this.setState({
-      value: evt.target.value,
-      error: null
-    })
-  }
-
-  handleKeyDown = (evt) => {
-    if(['Enter','Tab',','].includes(evt.key)) {
-      evt.preventDefault();
-
-      const email = this.state.value.trim();
-
-      if(email && this.isValid(email)) {
-        this.setState({
-          emails: [...this.state.emails, email],
-          value: ''
-        });
-      }
-    }
+  setError = (error) => {
+    this.setState({ error });
   };
+  
 
-  handleDelete = (toBeRemoved) => {
-    this.setState({
-      emails: this.state.emails.filter(email => email !== toBeRemoved)
+  handleTypeaheadChange = (selected) => {
+    this.setState({ emails: selected });
+  };  
+  
+  handleChange = (selected) => {
+    let value = "";
+    if (selected.length > 0) {
+      value = selected.slice(-1)[0];
+    }
+    const isValidEmail = isValid(value, this.state.emails, (error) => {
+      this.setState({ showModal: true, modalMessage: error });
     });
-  };
 
-  handlePaste = evt => {
-    evt.preventDefault();
-
-    const paste = evt.clipboardData.getData("text");
-    // eslint-disable-next-line
-    const emails = paste.match(/[\w\d\.-]+@[\w\d\.-]+\.[\w\d\.-]+/g);
-
-    if (emails) {
-      const toBeAdded = emails.filter(email => !this.isInList(email));
-
-      this.setState({
-        emails: [...this.state.emails, ...toBeAdded]
-      });
+    if (isValidEmail) {
+      this.setState({ emails: selected });
     }
   };
-
-  isValid(email) {
-    let error = null;
-
-    if (this.isInList(email)) {
-      error = `${email} has already been added.`;
-    }
-
-    if (!this.isEmail(email)) {
-      error = `${email} is not a valid email address.`;
-    }
-
-    if (error) {
-      this.setState({ error });
-      return false;
-    }
-    return true;
-  }
-
-  isInList(email) {
-    return this.state.emails.includes(email);
-  }
-
-  isEmail(email) {
-    // eslint-disable-next-line
-    return /[\w\d\.-]+@[\w\d\.-]+\.[\w\d\.-]+/.test(email);
-  }
+  
+  handleCloseModal = () => {
+    this.setState({ showModal: false });
+  };
 
   render() {
     return (
-
-      <main className="wrapper">
-        {this.state.emails.map(email => (
-          <div className="tag-item" key={email}>
-            {email}
-
-            <button
-              type="button"
-              className="button"
-              onClick={() => this.handleDelete(email)}
-            >
-              &times;
-            </button>
-          </div>
-        ))}
-
-        <input
-        className="input"
-        placeholder="Type or paste email and hit 'Enter'"
-        value={this.state.value}
-        onChange={this.handleChange}
-        onKeyDown={this.handleKeyDown}
-        onPaste={this.handlePaste}
+      <div>
+        <Typeahead
+          className="input"
+          id="basic-typeahead-multi"
+          labelKey="name"
+          multiple
+          allowNew
+          onChange={this.handleChange}
+          options={this.state.options}
+          placeholder="Type or paste email and hit 'Enter'"
+          selected={this.state.emails}
         />
-
-        {this.state.error &&
-          <p className="error">{this.state.error}</p>}
-
-      </main>
+        <Modal show={this.state.showModal} onHide={this.handleCloseModal}>
+          <Modal.Header closeButton>
+            <Modal.Title>Error</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>{this.state.modalMessage}</Modal.Body>
+          <Modal.Footer>
+            <Button variant="secondary" onClick={this.handleCloseModal}>
+              Close
+            </Button>
+          </Modal.Footer>
+        </Modal>
+      </div>
       );
   }
 }
